@@ -300,7 +300,9 @@ class Capture:
             except: pass
             try: Capture.ban(self)
             except: pass
-        open(f"results/{fname}/Capture.txt", 'a').write(Capture.builder(self))
+            try: Capture.check_balance(self)
+            except: pass
+         open(f"results/{fname}/Capture.txt", 'a').write(Capture.builder(self))
         Capture.notify(self)
 class Login:
     def __init__(self, email, password):

